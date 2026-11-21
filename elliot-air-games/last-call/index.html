@@ -1,0 +1,917 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Elliot Air · Last Call</title>
+<meta name="theme-color" content="#0a1328">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<style>body{margin:0}[hidden]{display:none!important}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@400;500;600;700;800&family=Anton&family=DM+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one column bar game. Pick who lost, pick the deck, roll a 3D die, a favor voucher prints out like a boarding pass. Wallet and custom favors live in tabs. Single dark theme; the accent heats from gold (Chill) to coral (Sexy) to red (Extreme). */
+@property --accent{syntax:"<color>";inherits:true;initial-value:#ffc94a}
+@property --glow{syntax:"<color>";inherits:true;initial-value:rgba(255,201,74,.16)}
+:root{
+  color-scheme: dark;
+  --bg:#0a1328; --surf:#111d38; --line:#22355c; --text:#f3f1ec; --muted:#9ea8c2;
+  --accent:#ffc94a; --glow:rgba(255,201,74,.16); --blush:#f4b6c4;
+  --paper:#f7f3ea; --ink:#141b2e; --navy:#13213f;
+  --f-display:"Instrument Serif", Georgia, serif;
+  --f-body:"Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono:"DM Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --f-code:"Anton", Impact, "Arial Narrow", sans-serif;
+  transition:--accent .7s, --glow .7s;
+}
+:root[data-level="sexy"]{--accent:#ff8f6b;--glow:rgba(255,120,95,.2)}
+:root[data-level="extreme"]{--accent:#ff3d5e;--glow:rgba(255,40,80,.28)}
+*{box-sizing:border-box}
+html,body{min-height:100%}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--f-body);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));padding-block:16px 40px}
+[hidden]{display:none!important}
+button,input,select,textarea{font:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.sky{position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(800px 480px at 50% 30%, var(--glow), transparent 70%)}
+#stars{position:fixed;inset:0;z-index:0;pointer-events:none}
+.wrap{position:relative;z-index:1;max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+
+.top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.logo{display:flex;align-items:center;gap:9px;font-family:var(--f-code);font-size:16px;letter-spacing:.14em;text-transform:uppercase;white-space:nowrap}
+.logo svg{width:24px;height:24px}
+.logo small{font-family:var(--f-mono);font-size:10px;letter-spacing:.16em;color:var(--accent)}
+.tabs{display:flex;border:1px solid var(--line);border-radius:99px;padding:3px;background:color-mix(in srgb, var(--surf) 80%, transparent)}
+.tabs button{appearance:none;border:0;background:transparent;color:var(--muted);font-size:12px;font-weight:700;padding:7px 12px;border-radius:99px;cursor:pointer;white-space:nowrap;display:inline-flex;gap:5px;align-items:center}
+.tabs button[aria-selected="true"]{background:var(--text);color:var(--bg)}
+.tabs .n{font-family:var(--f-mono);font-size:10.5px;opacity:.8}
+
+.eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent)}
+h1{font-family:var(--f-display);font-weight:400;font-size:clamp(40px,10vw,60px);line-height:1;margin:0;text-wrap:balance}
+h1 em{color:var(--accent)}
+.sub{color:var(--muted);margin:0;max-width:46ch}
+.label{font-family:var(--f-mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+.group{display:flex;flex-direction:column;gap:10px}
+
+/* Loser picker */
+.who{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pc.both{grid-column:1 / -1;flex-direction:row;align-items:center;flex-wrap:wrap;column-gap:12px;row-gap:2px}
+.pc.both b{flex:1}
+.pc.both > span:last-child{flex-basis:100%;padding-left:62px;margin-top:-6px}
+.tk2{display:flex}
+.tk2 .tk + .tk{margin-left:-8px;box-shadow:0 0 0 2px var(--surf)}
+.seg.seg3{grid-template-columns:repeat(3,1fr)}
+.seg.seg3 button{padding:10px 4px;font-size:12px}
+.pc{appearance:none;cursor:pointer;text-align:left;border:1px solid var(--line);background:var(--surf);color:var(--text);border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:8px;transition:border-color .25s, box-shadow .25s, transform .2s;position:relative}
+.pc:hover{transform:translateY(-2px)}
+.pc[aria-pressed="true"]{border-color:var(--pcol);box-shadow:0 0 0 1px var(--pcol), 0 14px 34px -16px var(--pcol)}
+.pc .tk{width:30px;height:30px;border-radius:50%;background:var(--pcol);color:var(--ink);display:grid;place-items:center}
+.pc .tk svg{width:16px;height:16px}
+.pc b{font-size:17px;font-weight:800}
+.pc span{font-size:12.5px;color:var(--muted)}
+.pc .ls{position:absolute;top:12px;right:12px;font-family:var(--f-mono);font-size:11px;color:var(--muted)}
+
+/* Levels */
+.levels{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.lv{appearance:none;cursor:pointer;border:1px solid var(--line);background:transparent;color:var(--text);border-radius:16px;padding:12px 10px;display:flex;flex-direction:column;gap:8px;align-items:flex-start;transition:border-color .25s, background .25s}
+.lv .fl{display:flex;gap:3px}
+.lv .fl i{width:6px;height:14px;border-radius:3px;background:var(--line)}
+.lv b{font-family:var(--f-code);font-weight:400;font-size:18px;letter-spacing:.06em;text-transform:uppercase}
+.lv small{font-size:11.5px;color:var(--muted);line-height:1.3}
+.lv[aria-pressed="true"]{border-color:var(--accent);background:color-mix(in srgb, var(--accent) 12%, transparent)}
+.lv[aria-pressed="true"] .fl i.on{background:var(--accent)}
+
+/* Stage + 3D die */
+.stage{position:relative;display:flex;flex-direction:column;align-items:center;gap:18px;padding:26px 0 6px}
+.scene{--h:59px;width:118px;height:118px;perspective:700px;position:relative;margin:14px 0 40px}
+.scene.tap{appearance:none;border:0;background:none;padding:0;cursor:pointer;color:inherit}
+.scene.big{--h:66px;width:132px;height:132px;margin:0}
+.scene::after{content:"";position:absolute;left:10%;right:10%;bottom:-22px;height:16px;border-radius:50%;background:rgba(0,0,0,.45);filter:blur(8px);transition:transform .4s}
+.cube{width:100%;height:100%;position:relative;-webkit-transform-style:preserve-3d;transform-style:preserve-3d;transform:rotateX(-22deg) rotateY(32deg);animation:idle 6s ease-in-out infinite}
+@keyframes idle{50%{transform:rotateX(-18deg) rotateY(52deg) translateY(-6px)}}
+.cube.spin{animation:none;transition:transform 1.5s cubic-bezier(.2,.75,.25,1)}
+.face{position:absolute;inset:0;border-radius:18px;background:linear-gradient(145deg, #fbf8f1, #e9e1d2);border:1px solid rgba(20,27,46,.1);display:grid;place-items:center;box-shadow:inset 0 0 0 6px rgba(255,255,255,.35), inset 0 -10px 24px rgba(20,27,46,.1);-webkit-backface-visibility:hidden;backface-visibility:hidden}
+.cube.still{animation:none}
+.core{position:absolute;inset:6%;background:#e6ddcc;border-radius:10px}
+.c1{transform:translateZ(0)}.c2{transform:rotateY(90deg)}.c3{transform:rotateX(90deg)}
+.face svg{width:46%;height:46%}
+.face .w{font-family:var(--f-code);font-size:15px;letter-spacing:.12em;color:var(--ink)}
+.f1{transform:translateZ(var(--h))}.f2{transform:rotateY(180deg) translateZ(var(--h))}.f3{transform:rotateY(90deg) translateZ(var(--h))}
+.f4{transform:rotateY(-90deg) translateZ(var(--h))}.f5{transform:rotateX(90deg) translateZ(var(--h))}.f6{transform:rotateX(-90deg) translateZ(var(--h))}
+.halo{position:absolute;inset:-40px;border-radius:50%;background:radial-gradient(circle, color-mix(in srgb, var(--accent) 40%, transparent), transparent 65%);opacity:0;pointer-events:none}
+.halo.on{animation:halo 1.6s ease-out}
+@keyframes halo{20%{opacity:.9}100%{opacity:0;transform:scale(1.4)}}
+.btn{appearance:none;cursor:pointer;font-weight:800;font-size:15px;border-radius:99px;padding:15px 26px;border:1px solid var(--accent);background:var(--accent);color:var(--ink);display:inline-flex;align-items:center;justify-content:center;gap:9px;transition:transform .15s, opacity .2s, box-shadow .2s;box-shadow:0 12px 30px -12px var(--glow)}
+.btn:hover{transform:translateY(-2px)}
+.btn:disabled{opacity:.35;cursor:not-allowed;transform:none}
+.btn svg{width:16px;height:16px}
+.btn.outline{background:transparent;color:var(--text);border-color:var(--line);box-shadow:none}
+.btn.ghost{background:transparent;color:var(--muted);border-color:transparent;box-shadow:none;font-weight:600}
+.roll{min-width:220px;font-size:16px}
+
+/* Voucher */
+.slot{width:100%;position:relative}
+.slot::before{content:"";display:block;height:8px;border-radius:99px;background:linear-gradient(#050a16, #0f1a33);box-shadow:inset 0 2px 4px rgba(0,0,0,.8);margin:0 6%}
+.voucher{position:relative;margin:-4px 8% 0;background:var(--paper);color:var(--ink);border-radius:0 0 18px 18px;overflow:hidden;box-shadow:0 30px 60px -24px rgba(0,0,0,.9);transform-origin:top center;clip-path:inset(0 0 0 0 round 0 0 18px 18px)}
+.voucher.print{animation:print 1.1s cubic-bezier(.3,.7,.2,1) both}
+@keyframes print{from{clip-path:inset(0 0 100% 0 round 0 0 18px 18px);transform:translateY(-12px)}to{clip-path:inset(0 0 0 0 round 0 0 18px 18px);transform:none}}
+.voucher::after{content:"";position:absolute;top:0;bottom:0;left:-60%;width:40%;background:linear-gradient(100deg, transparent, rgba(255,255,255,.65), transparent);transform:skewX(-18deg);pointer-events:none}
+.voucher.print::after{animation:shine 1.4s .9s ease-out both}
+@keyframes shine{to{left:130%}}
+.v-head{display:flex;align-items:center;gap:10px;padding:12px 18px;background:var(--navy);color:#f7f3ea}
+.v-head svg{width:20px;height:20px}
+.v-head .t{font-family:var(--f-code);font-size:14px;letter-spacing:.16em}
+.v-head .lvtag{margin-left:auto;font-family:var(--f-mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink);background:var(--accent);padding:3px 8px;border-radius:99px}
+.v-body{padding:18px 20px 14px;display:flex;flex-direction:column;gap:10px}
+.v-route{display:flex;align-items:center;gap:10px;font-family:var(--f-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#7b8298}
+.v-route b{font-family:var(--f-code);font-weight:400;font-size:22px;letter-spacing:.04em;color:var(--ink)}
+.v-route .ln{flex:1;border-top:2px dashed rgba(20,27,46,.2)}
+.v-text{font-family:var(--f-display);font-size:clamp(25px,6.4vw,32px);line-height:1.15;margin:0;color:var(--ink);text-wrap:pretty}
+.v-foot{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;padding:12px 20px 16px;border-top:2px dashed rgba(20,27,46,.2)}
+.v-foot dl{display:flex;gap:18px;margin:0}
+.v-foot dt{font-family:var(--f-mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:#7b8298}
+.v-foot dd{margin:2px 0 0;font-weight:800;font-size:13px}
+.barcode{width:84px;height:34px}
+.v-actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;padding-top:16px}
+.v-actions .btn{flex:1 1 160px}
+.note{font-size:12.5px;color:var(--muted);text-align:center;margin:0}
+
+/* Popup */
+body.lock{overflow:hidden}
+.pop{position:fixed;inset:0;z-index:40;display:flex;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
+  padding:calc(16px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+  background:radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--accent) 26%, rgba(5,8,18,.82)), rgba(5,8,18,.95) 68%);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);animation:fadeIn .25s ease both}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.pop-in{width:100%;max-width:440px;margin:auto;display:flex;flex-direction:column;align-items:center;gap:14px}
+.pop-label{font-family:var(--f-mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);text-align:center}
+.thrower{height:210px;width:100%;display:grid;place-items:center;transition:height .5s cubic-bezier(.4,0,.2,1), transform .5s cubic-bezier(.4,0,.2,1)}
+.thrower.mini{height:70px;transform:scale(.45)}
+.tumble{will-change:transform}
+.pop-card{width:100%}
+.pop .voucher{margin:0;border-radius:18px;clip-path:inset(0 round 18px)}
+.voucher.popin{animation:popin .7s cubic-bezier(.2,1.3,.4,1) both}
+@keyframes popin{0%{transform:translateY(30px) scale(.55) rotate(-5deg);opacity:0}60%{opacity:1}100%{transform:none;opacity:1}}
+.voucher.popin::after{animation:shine 1.3s .55s ease-out both}
+.pop-actions{width:100%;display:flex;flex-direction:column;gap:8px;animation:fadeIn .4s .35s both}
+.pop-actions .btn{width:100%}
+@media (max-height:700px){ .thrower{height:170px} .thrower.mini{height:52px;transform:scale(.36)} .v-body{padding:14px 16px 10px} .v-text{font-size:24px} }
+
+/* Wallet + add */
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:6px;border:1px solid var(--line);border-radius:14px;padding:4px}
+.seg button{appearance:none;cursor:pointer;border:0;border-radius:10px;padding:10px;background:transparent;color:var(--muted);font-weight:700;font-size:13px}
+.seg button[aria-pressed="true"]{background:var(--surf);color:var(--text);box-shadow:inset 0 0 0 1px var(--line)}
+.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.item{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:start;background:var(--surf);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+.item .chk{appearance:none;cursor:pointer;width:24px;height:24px;border-radius:7px;border:1.5px solid var(--line);background:transparent;display:grid;place-items:center;color:var(--ink);margin-top:2px}
+.item .chk svg{width:14px;height:14px;opacity:0}
+.item.done .chk{background:var(--accent);border-color:var(--accent)}
+.item.done .chk svg{opacity:1}
+.item p{margin:0;font-size:14.5px;line-height:1.4}
+.item.done p{opacity:.45;text-decoration:line-through}
+.item .meta{display:flex;gap:8px;margin-top:5px;font-family:var(--f-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.item .meta .lvd{color:var(--lc)}
+.del{appearance:none;cursor:pointer;border:0;background:transparent;color:var(--muted);padding:4px;border-radius:8px}
+.del svg{width:16px;height:16px}
+.del:hover{color:var(--text)}
+.empty{border:1px dashed var(--line);border-radius:14px;padding:22px;text-align:center;color:var(--muted);font-size:14px}
+.panel{background:var(--surf);border:1px solid var(--line);border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:12px}
+textarea{width:100%;min-height:90px;resize:vertical;color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px;font-size:16px;line-height:1.45}
+textarea:focus{border-color:var(--accent);outline:none}
+.counts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.counts div{border:1px solid var(--line);border-radius:12px;padding:10px;text-align:center}
+.counts b{display:block;font-family:var(--f-code);font-weight:400;font-size:24px;line-height:1}
+.counts span{font-family:var(--f-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.rules{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted)}
+.rules li::before{content:"✈ ";color:var(--accent)}
+#toasts{position:fixed;z-index:25;left:50%;transform:translateX(-50%);top:calc(14px + env(safe-area-inset-top, 0px));display:flex;flex-direction:column;gap:6px;width:min(420px, calc(100vw - 32px));pointer-events:none}
+.toast{background:var(--surf);border:1px solid var(--accent);border-radius:12px;padding:10px 14px;font-size:13.5px;box-shadow:0 14px 30px -14px #000;animation:pop .35s ease both}
+@keyframes pop{from{transform:translateY(-8px);opacity:0}to{transform:none;opacity:1}}
+.spark{position:fixed;z-index:24;pointer-events:none;width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 10px var(--accent)}
+
+@media (max-width:440px){
+  .logo small{display:none}
+  .tabs button{padding:7px 10px}
+  .top{gap:6px}
+  .logo{font-size:14px;letter-spacing:.1em;gap:7px}
+  .logo svg{width:22px;height:22px}
+}
+@media (max-width:380px){
+  .logo{font-size:0;gap:0}
+  .tabs button{padding:7px 9px}
+  .lv small{display:none}
+  .voucher{margin-left:4%;margin-right:4%}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="sky" aria-hidden="true"></div>
+<canvas id="stars" aria-hidden="true"></canvas>
+<main class="wrap" id="app"></main>
+<div id="toasts" aria-live="polite"></div>
+
+<script>
+/* ---------- Icons ---------- */
+const LOGO = `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#ffc94a" d="M21.5 15.5v-2L13.5 8.5V3a1.5 1.5 0 0 0-3 0v5.5l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5l-2-1.5v-5.5z"/><g fill="#13213f" fill-opacity=".78" font-family="Arial,Helvetica,sans-serif" font-weight="900" font-size="3.1"><text x="17.4" y="13.8" text-anchor="middle" transform="rotate(32 17.4 12.7)">E</text><text x="17.4" y="13.8" text-anchor="middle" transform="matrix(-1 0 0 1 24 0) rotate(32 17.4 12.7)">E</text></g></svg>`;
+const ic = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const I = {
+  plane:`<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21.5 15.5v-2L13.5 8.5V3a1.5 1.5 0 0 0-3 0v5.5l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5l-2-1.5v-5.5z"/></svg>`,
+  heart:`<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>`,
+  flame:ic('<path d="M12 3c1 4 5 5 5 10a5 5 0 0 1-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-4-1-6 1-9z"/>'),
+  glass:ic('<path d="M7 3h10l-1 8a4 4 0 0 1-8 0z"/><path d="M12 15v6M8 21h8"/>'),
+  dice:ic('<rect x="4" y="4" width="16" height="16" rx="4"/><circle cx="9" cy="9" r="1" fill="currentColor"/><circle cx="15" cy="15" r="1" fill="currentColor"/><circle cx="15" cy="9" r="1" fill="currentColor"/><circle cx="9" cy="15" r="1" fill="currentColor"/>'),
+  check:ic('<path d="M5 12l4 4 10-10"/>'),
+  x:ic('<path d="M6 6l12 12M18 6L6 18"/>'),
+  plus:ic('<path d="M12 5v14M5 12h14"/>'),
+  wallet:ic('<rect x="3" y="6" width="18" height="13" rx="3"/><path d="M16 12h2"/><path d="M5 6l10-3 1 3"/>')
+};
+const BARCODE = (() => { let x = 0, r = ""; [2,1,3,1,1,2,1,3,2,1,1,2,3,1,2,1,1,3,1,2,2,1,3,1].forEach((w,i) => { if (i%2===0) r += `<rect x="${x}" y="0" width="${w}" height="40"/>`; x += w + 1; }); return `<svg class="barcode" viewBox="0 0 ${x} 40" preserveAspectRatio="none" fill="#141b2e" aria-hidden="true">${r}</svg>`; })();
+
+/* ---------- Players ---------- */
+const PEOPLE = {
+  eunice:{name:"Eunice", tok:"heart", color:"#f4b6c4", deck:"her", winner:"elliot"},
+  elliot:{name:"Elliot", tok:"plane", color:"#ffc94a", deck:"him", winner:"eunice"},
+  both:{name:"Eunice & Elliot", tok:"heart", color:"#ff9ec0", deck:"both", winner:"both"}
+};
+const LEVELS = {
+  chill:{name:"Chill", n:1, blurb:"Sweet, flirty, bar-safe", color:"#ffc94a"},
+  sexy:{name:"Sexy", n:2, blurb:"For the ride home", color:"#ff8f6b"},
+  extreme:{name:"Extreme", n:3, blurb:"Lock the door", color:"#ff3d5e"}
+};
+
+/* ---------- Favors ----------
+   "her" = favors Eunice owes Elliot when she loses. "him" = favors Elliot owes Eunice.
+   Each side: shared + side-specific = 70 Chill, 70 Sexy, 60 Extreme (200). */
+const SHARED = {
+  chill:[
+    "A 15-minute shoulder and back massage. No watching the clock.",
+    "Breakfast in bed tomorrow morning.",
+    "The winner picks the movie tonight. No complaints allowed.",
+    "Ten slow kisses, wherever the winner points.",
+    "Carry the winner's bag for the rest of the night.",
+    "A foot massage while the winner watches whatever they want.",
+    "Order the winner's next drink and deliver it with a compliment.",
+    "Three honest compliments, said while holding eye contact.",
+    "A slow dance right now, to whatever song is playing.",
+    "Plan the next date entirely, from start to finish.",
+    "Hold hands for the rest of the night. No letting go.",
+    "Write a short love note and hide it where they'll find it this week.",
+    "A five-minute scalp massage.",
+    "The winner chooses your outfit for tomorrow.",
+    "You're the big spoon all night, no complaints if your arm falls asleep.",
+    "Make the winner's favorite snack before bed.",
+    "Kiss the winner like it's the last scene of a movie.",
+    "Recreate your first kiss, as accurately as possible.",
+    "The winner gets the comfy side of the bed tonight.",
+    "A kiss on the neck every time the bartender looks away. Discreetly.",
+    "Pay for the next round.",
+    "Whisper one thing you love about them every hour tomorrow.",
+    "Take the winner's photo until they love one. At least twenty shots.",
+    "The winner controls the music in the car for a week.",
+    "Run a bath for the winner, candles included.",
+    "A hand massage under the table, right now.",
+    "No phones for the rest of the night. Full attention on the winner.",
+    "Tell the story of the moment you fell for them.",
+    "Feed the winner dessert, one spoon at a time.",
+    "Wake up first tomorrow and bring coffee.",
+    "Back scratches for as long as the winner wants.",
+    "The winner picks tomorrow's lunch spot.",
+    "A 30-second kiss with no hands.",
+    "Sit on the winner's side of the booth for the rest of the night.",
+    "Say \"you were right\" about an argument of the winner's choice.",
+    "Lip-sync a full song for the winner when you get home.",
+    "A whole day of saying yes to small requests.",
+    "Book a couples massage for your next free weekend.",
+    "Play with the winner's hair while they relax.",
+    "Send the winner a flirty voice note tomorrow while they're working."
+  ],
+  sexy:[
+    "A slow strip tease when you get home, one piece at a time.",
+    "A full-body oil massage that doesn't stop at the back.",
+    "Shower together tonight. You do all the washing.",
+    "Make out in the taxi home like teenagers.",
+    "Blindfold the winner and kiss them for five minutes.",
+    "The winner picks the position tonight.",
+    "Ten minutes of kisses anywhere except the lips.",
+    "Take your underwear off in the bathroom and tell the winner when it's done.",
+    "The winner chooses where you kiss them, for as long as they want.",
+    "Undress the winner using only your mouth.",
+    "A lap dance with the lights low, to a song they choose.",
+    "Wake the winner up tomorrow in the best possible way.",
+    "Whisper exactly what you'll do to them tonight. Every detail.",
+    "Hands behind your back. The winner does whatever they want for 5 minutes.",
+    "Send a very naughty text right now, from across the table.",
+    "Make the winner a drink at home, completely naked.",
+    "A sexy photo for the winner's eyes only, tomorrow.",
+    "Ice cubes first, then warm hands. Everywhere.",
+    "One minute of teasing under the table. Very discreetly.",
+    "Kiss your way from their neck down to their hips, slowly.",
+    "The winner sets the pace tonight, and you're not allowed to speed up.",
+    "A sensual bath together, candles and all.",
+    "Wear the lingerie or underwear the winner picks.",
+    "Dirty talk for the whole ride home, very quietly.",
+    "Do exactly what the winner says for 10 minutes in the bedroom.",
+    "Trace their whole body with your fingertips for 5 minutes.",
+    "A morning round tomorrow, before coffee.",
+    "Kiss in the elevator until the doors open.",
+    "Pick a position you've never tried and try it tonight.",
+    "Lights on tonight. No hiding.",
+    "The winner touches, you don't, for 10 minutes.",
+    "Slow-dance naked to one song.",
+    "Whisper your favorite memory of them in bed.",
+    "The winner can interrupt anything to claim a kiss, all day tomorrow.",
+    "Strip rock-paper-scissors at home. You start with one item fewer.",
+    "Leave a hickey somewhere only the winner knows about.",
+    "A slow massage with warm massage-candle oil.",
+    "Make the winner's favorite move last twice as long.",
+    "Spend the rest of the night naked, whatever you're doing.",
+    "Loosely tie the winner's wrists and kiss them everywhere."
+  ],
+  extreme:[
+    "One full hour of total control for the winner. Every order is followed, no questions.",
+    "Handcuffed to the headboard for 20 minutes. The winner decides everything.",
+    "Blindfold and ropes at the same time. You only find out what's coming when it happens.",
+    "A spanking. The winner picks the number, you count out loud and say thank you.",
+    "Edging: the winner takes you to the edge and stops. Five times before you're allowed.",
+    "No finishing until the winner says the word. All night.",
+    "Mirror facing the bed. Lights on, eyes open, no looking away.",
+    "A cushion under your hips, wrists held down, the winner sets the rhythm.",
+    "Three rounds before sunrise, in three different rooms.",
+    "Quickie pass: the winner can claim you once tomorrow, anywhere private, no warm-up.",
+    "Roleplay: strangers at a hotel bar. Real names only allowed afterwards.",
+    "Hands tied behind your back for the whole shower.",
+    "Narrate out loud everything you're doing while you do it.",
+    "Silence rule: not a sound allowed. The winner does everything to make you break.",
+    "One full hour of foreplay before anything else. The winner watches the clock.",
+    "The winner picks three positions. You hold each one until they say switch.",
+    "A rope around your wrist means you belong to the winner tonight.",
+    "A hotel night just for this. The winner writes the agenda, you follow it.",
+    "No clothes at home for 24 hours. Every time you cross paths: a kiss, minimum.",
+    "Ice cubes and warm massage oil, alternating, all over the body.",
+    "Bound and blindfolded while the winner uses only their mouth.",
+    "The safeword is yours. Everything else belongs to the winner for 30 minutes.",
+    "Kitchen counter, then the dining table, then the bed. In that order.",
+    "Sixty-nine until someone gives in. Whoever gives in first owes another round.",
+    "Standing up against the wall. The bed is off-limits tonight.",
+    "A 3 a.m. wake-up call. The winner decides how.",
+    "Blindfolded, you follow only the winner's whispered orders.",
+    "Double dare: the winner picks two Extreme favors, back to back.",
+    "Tease and deny for a whole day: messages, touches, nothing happens before midnight.",
+    "On the floor, on a pile of cushions. Slow at first, then whatever the winner asks.",
+    "24-hour free-use day: the winner can claim the loser any time, anywhere private.",
+    "Orgasm lock: the loser can't finish for 48 hours without the winner's permission.",
+    "The winner sets three rules for tonight. The loser follows them until morning."
+  ]
+};
+const SPECIFIC = {
+  her:{ /* Eunice → Elliot */
+    chill:[
+      "Wear his favorite outfit of yours on the next date.",
+      "Wear one of his shirts to bed tonight.",
+      "Sit on his lap for one whole song.",
+      "Text him something flirty right now, from across the table.",
+      "Call him \"Captain\" for the rest of the night.",
+      "Fix his collar and kiss him slowly, like he belongs to you.",
+      "Let him pick your lipstick for tomorrow.",
+      "Dance for him for one song when you get home.",
+      "A long kiss on his neck in the taxi home.",
+      "Play with his hair while he finishes his drink.",
+      "Write a tiny \"property of Eunice\" somewhere on him.",
+      "Steal his jacket, wear it home, return it with a kiss.",
+      "Tell him what you thought the first time you saw him.",
+      "Keep your hand on his thigh for the rest of the night.",
+      "Let him choose your perfume for the next date.",
+      "Kiss him good morning before he even opens his eyes.",
+      "Send him a cute selfie in the middle of his workday.",
+      "Cook him a dish from your childhood.",
+      "Teach him a flirty sentence in Cantonese he can use on you.",
+      "Read his palm and invent a very romantic future.",
+      "A slow kiss on each eyelid.",
+      "Let him win the next argument, gracefully.",
+      "Wear your hair the way he likes it on the next date.",
+      "Whisper what you'll do to him later, but refuse to explain.",
+      "Bite his earlobe, very lightly.",
+      "Ten minutes of full attention: eye contact only, no looking away.",
+      "Leave a lipstick mark on his collar.",
+      "Tell him three things you love about his body.",
+      "Send him a photo of tomorrow's outfit before you put it on.",
+      "Let him pick the next country you visit together."
+    ],
+    sexy:[
+      "Wear his favorite lingerie set tonight and let him unwrap you.",
+      "Ride him tonight at his pace, not yours.",
+      "A slow lap dance while he sits in a chair.",
+      "Wake him up with your mouth tomorrow morning.",
+      "Undress him slowly, kissing everything you uncover.",
+      "Only his shirt and heels when you get home.",
+      "Sit on the kitchen counter and let him take charge.",
+      "Go down on him somewhere that isn't the bed.",
+      "Send him a teasing photo from the bathroom right now. Nothing too revealing.",
+      "Tease him through his jeans in the taxi. Discreetly.",
+      "Tell him your fantasy tonight, in detail.",
+      "Take your panties off in the bathroom and slip them into his pocket.",
+      "Let him watch you undress, slowly.",
+      "Kiss down his chest and stop just before he wants you to. Twice.",
+      "Shower with him and take care of him in there.",
+      "A show for him on the bed. He can only watch.",
+      "Bite his neck, gently, in the elevator.",
+      "Whisper \"take me home\" in his ear, right now.",
+      "He picks the position, the room and the time.",
+      "An oil massage for him. Front side included.",
+      "Wear stockings to bed.",
+      "Say his name the whole time tonight.",
+      "Climb on him the moment you walk through the door.",
+      "Wear something he's never seen you in.",
+      "A strip tease to his favorite song.",
+      "Let him blindfold you and guess where his lips are.",
+      "Tell him exactly what you want, out loud, in bed.",
+      "He finishes twice before the weekend is over.",
+      "Wear the most daring outfit in your closet on the next date night.",
+      "Kiss him from his ankles all the way up."
+    ],
+    extreme:[
+      "You're his for the night. Every answer is \"yes, Captain\".",
+      "Handcuffed to the bed while he takes all the time he wants with you.",
+      "Go down on him until he finishes, with your hands cuffed behind your back.",
+      "Ride him blindfolded. He guides your hips, you don't see a thing.",
+      "He spanks you, you count. He picks the number and the position.",
+      "Kneel on a cushion and undress him with your teeth.",
+      "Wake him up twice tonight with your mouth.",
+      "He chooses: on your knees, on the counter, or against the window.",
+      "Sit on his face and stay there until he says you can move.",
+      "He ties your wrists and ankles to the bed with rope. Then he decides.",
+      "He edges you three times with his mouth before he lets you finish.",
+      "Nothing but heels and his tie around your neck tonight.",
+      "From behind, in front of the mirror, eyes locked on his the whole time.",
+      "Beg for it. In detail, out loud, before he even touches you.",
+      "He finishes wherever he chooses.",
+      "Undress completely the second the door closes and wait for him on your knees.",
+      "Sixty-nine with you on top, and you're not allowed to stop first.",
+      "Lingerie of his choice all night. It only comes off when he says so.",
+      "Roleplay: you're the flight attendant, he's the first-class passenger who wants everything.",
+      "Blindfolded and tied. He only uses words to tell you what's coming.",
+      "No panties for the whole next date. Send him proof from the restroom.",
+      "A lap dance that ends wherever he wants it to end.",
+      "He picks a position you've never tried. You make it work.",
+      "Morning, afternoon and night tomorrow. He picks the rooms.",
+      "You can't finish until he says so, tonight and tomorrow morning.",
+      "Touch yourself in front of him while he gives instructions from the chair.",
+      "He leaves marks where only he can see them.",
+      "He wakes you up any way he wants, any time tonight.",
+      "Reverse cowgirl facing the mirror, so he sees everything.",
+      "Cushion under your hips, wrists in handcuffs, and he goes slow until you beg.",
+      "On your knees, hands cuffed behind your back: go down on him until he finishes. No hands, no breaks.",
+      "Free-use morning: tomorrow until noon, he can take you whenever he wants. No warm-up, no questions.",
+      "Blindfolded on your knees, wrists tied: he guides your head, you follow until he finishes.",
+      "He sits on the couch watching whatever he wants. You stay between his knees until he finishes.",
+      "Under the table while he scrolls his phone: you're not allowed to stop until he finishes.",
+      "Wake-up call: start with your mouth before he opens his eyes, and don't stop until he finishes.",
+      "Free-use night: until sunrise, he can wake you and take you any way he likes.",
+      "When he gets home, you're kneeling at the door, hands behind your back, waiting for his order.",
+      "Ask permission for everything tonight, including to finish. He can say no.",
+      "He edges himself in your mouth as long as he wants, then decides where he finishes.",
+      "Wrists cuffed to the headboard, lying on your back: he finishes how and where he chooses.",
+      "Ten minutes on your knees in the shower, hands behind your back.",
+      "He controls your orgasm all night: you only finish when he counts down from ten.",
+      "Bent over the edge of the bed, wrists tied, cushion under your hips: he takes you until he finishes.",
+      "On call all weekend: one text from him and you go to the bedroom and wait on your knees.",
+      "On your knees facing the mirror while you go down on him, so he watches everything.",
+      "Tonight he decides if you finish at all. And when.",
+      "He finishes twice before you get anything: once with your mouth, once however he wants.",
+      "Collar on: come to him on your knees and serve until he's done.",
+      "Silent service: on your knees, not a word, not a sound, until he finishes.",
+      "Sixty-nine with you underneath, hands tied: he can stop whenever he wants, you can't.",
+      "Kneel at the edge of the bed. He stands, hand in your hair, setting the pace until he finishes.",
+      "Free-use pass: once this week, any time, anywhere private, you drop what you're doing.",
+      "Make him finish three times before the weekend ends, whenever he chooses.",
+      "Tied spread on the bed, he edges you with his mouth and stops every time you're close. Ten times."
+    ]
+  },
+  him:{ /* Elliot → Eunice */
+    chill:[
+      "Buy her flowers this week, without being reminded.",
+      "A foot massage while she picks the show.",
+      "Do her skincare routine for her tonight.",
+      "Carry her home on your back for the last stretch.",
+      "Write her a real love letter, on paper.",
+      "Plan a surprise date she won't see coming.",
+      "She gets to keep your hoodie. Permanently.",
+      "Brush her hair for ten minutes.",
+      "Order for her at the next restaurant, and get it right.",
+      "Call her \"Princess\" for the rest of the night. Sincerely.",
+      "Learn one sentence in Cantonese and say it perfectly.",
+      "Send her a good-morning message with a reason you love her.",
+      "Bubble tea runs on demand for a week.",
+      "Dance with her to the next song she likes. No excuses.",
+      "Take her photo until she's happy with one. Patience required.",
+      "A forehead kiss in front of everyone.",
+      "She picks your outfit for the next date.",
+      "Kiss her hand like a gentleman every time she sits down.",
+      "Rub her shoulders while she finishes her drink.",
+      "Tell her the exact moment you knew you liked her.",
+      "Full gentleman mode all night: doors, chairs, coats.",
+      "Cuddle her until she falls asleep. No phone.",
+      "Breakfast in bed, and stay for the cuddles.",
+      "Make her a playlist of songs that make you think of her.",
+      "A back massage with her favorite lotion.",
+      "Say yes to her next three tiny requests.",
+      "Wash her hair for her in the shower.",
+      "Book her a nails or spa appointment.",
+      "Kiss her slowly in the middle of the street on the way home.",
+      "Tell her three things you love about her body."
+    ],
+    sexy:[
+      "Go down on her tonight until she says stop.",
+      "A full-body oil massage that ends exactly where she wants.",
+      "Undress her slowly, kissing every inch you uncover.",
+      "She's on top and she makes every rule.",
+      "Pin her against the wall the moment you're through the door.",
+      "Wake her up with your mouth tomorrow morning.",
+      "Run her a bath, then join her.",
+      "Tell her in detail how she looks to you tonight.",
+      "Five minutes kissing her inner thighs. No further.",
+      "She ties your hands and does whatever she likes.",
+      "Carry her to bed. Literally.",
+      "No rushing tonight. Her pleasure first, twice.",
+      "Shower together and wash every part of her.",
+      "Whisper what you'll do to her, all the way home.",
+      "A sensual massage with warm candle oil.",
+      "Blindfold her and use only your lips for ten minutes.",
+      "She picks ice, feather or warm oil, and exactly where you use it.",
+      "Make her come before you even get undressed.",
+      "Kiss her neck in the elevator until she pushes you away.",
+      "Let her watch you undress, slowly.",
+      "In front of the mirror, so she can watch everything.",
+      "A lap dance for her. Yes, you. Commit to it.",
+      "Tease her with ice, then warm her up.",
+      "No phone all night. Every minute is hers.",
+      "Hold her hands above her head while you kiss her everywhere.",
+      "Ten minutes exploring her back with your mouth.",
+      "Tell her your fantasy and ask what she'd change about it.",
+      "Morning round tomorrow, she chooses how.",
+      "Kiss down her spine while she lies on her stomach.",
+      "She decides when you get to finish."
+    ],
+    extreme:[
+      "You're hers for the night. She gives the orders, you obey every one.",
+      "Handcuffed to the bed while she uses you exactly how she wants.",
+      "Go down on her until she comes. Then again. Then once more.",
+      "Standing oral: she leans against the wall, you stay on your knees until her legs shake.",
+      "You can't finish until she has, three times.",
+      "She spanks you and picks the count.",
+      "Kneel and kiss your way up her legs. She decides when you stop.",
+      "Wake her up with your mouth. Then she decides what happens next.",
+      "She picks the room, the position and the speed.",
+      "Blindfolded and tied with rope, you're hers to play with for 30 minutes.",
+      "Edge her for as long as she can stand it, then she decides.",
+      "She ties your hands with your own tie and rides you.",
+      "Pin her down, but every single move needs her \"yes\".",
+      "Do everything she describes, exactly. No improvising.",
+      "Massage oil everywhere, then your mouth everywhere the oil went.",
+      "She sits on your face, and you stay until she says so.",
+      "Roleplay: she's the captain, you're the new crew member on probation.",
+      "20 minutes of full-body worship, mouth only, from her toes to her lips.",
+      "She finishes as many times as she wants before you get one.",
+      "Surprise hotel room, champagne, and whatever she asks for.",
+      "Strip for her while she directs the show from the bed.",
+      "Take her against the wall the second you get home.",
+      "Handcuffed while she rides you. Blindfold optional, her call.",
+      "She chooses a position you've never tried. You make it work.",
+      "No finishing all weekend unless she grants it.",
+      "Lift her onto the kitchen counter and go down on her right there.",
+      "Tell her your darkest fantasy and let her decide if it happens.",
+      "Her personal servant for the evening. Naked and on call.",
+      "Leave marks only where she asks for them.",
+      "Three rounds tonight. She sets the rhythm of every one.",
+      "She lies back, wrists cuffed above her head: go down on her until she comes, twice. She's not allowed to move.",
+      "Pin her wrists and make her come before you even get undressed.",
+      "She stands against the wall. Kneel and don't stop until her legs give out, then carry her to bed.",
+      "She sits on your face, hands tied behind her back. Hold her hips and set the pace until she comes.",
+      "Free use for her: tomorrow she can claim your mouth whenever she wants, anywhere private.",
+      "Three orgasms for her: one with your mouth, one with your hands, one however she begs for it.",
+      "Blindfold her, tie her to the bed, then use only your mouth until she can't take any more.",
+      "Edge her with your mouth for 20 minutes. She begs, you decide when she's allowed.",
+      "She's not allowed to touch you. Make her come as many times as you want before you take yours.",
+      "Wake her up with your mouth and don't stop until she's finished, before she's even fully awake.",
+      "On the kitchen counter, wrists held behind her back: go down on her until she comes.",
+      "A light spank between each orgasm. She counts both.",
+      "Make her come in front of the mirror, your hand on her chin so she watches.",
+      "She asks permission to come. Say \"not yet\" three times, then \"now\".",
+      "After she finishes, keep going until she comes again. The safeword stays hers.",
+      "Bent over the bed, cushion under her hips: take her slowly until she finishes first.",
+      "In the shower: kneel while she leans on the wall, and don't stop until she comes.",
+      "Take her however you like for 30 minutes, but she has to finish at least twice before you.",
+      "Tie her hands with your tie and make her come with your fingers while you whisper orders.",
+      "Free-use night for her pleasure: wake her whenever you want, to make her come.",
+      "She sits on your lap, back against your chest, wrists in one hand, your other hand between her legs until she comes.",
+      "Make her come in total silence. If she makes a sound, you start over.",
+      "Sixty-nine with her on top, wrists tied: you control everything until she finishes.",
+      "Blindfold her. Before each orgasm, describe what you're about to do.",
+      "Stop every time she's close, five times in a row, then finally let her."
+    ]
+  }
+};
+
+/* Both lost: favors you do together */
+const BOTH = {
+  "chill": [
+    "Slow dance together right now, whatever song is playing.",
+    "Order two shots, link arms, drink, then kiss.",
+    "Four selfies in a row: cute, silly, sexy, kiss.",
+    "Each of you whispers one thing you want to do later tonight.",
+    "Hold eye contact for 30 seconds. Whoever laughs first pays the next round.",
+    "Plan the next date together before you leave the bar.",
+    "Swap one thing until tomorrow: jacket, ring or watch.",
+    "A ten-second kiss every time your song comes on tonight.",
+    "Each of you says three things you love about the other.",
+    "Leave now. The night continues at home.",
+    "Bath or shower together tonight, no phones.",
+    "Breakfast in bed together tomorrow. Whoever wakes up first makes it."
+  ],
+  "sexy": [
+    "Make out in the taxi home like teenagers. Discreetly.",
+    "Undress each other the moment you get home, slowly, piece by piece.",
+    "Shower together and wash each other.",
+    "Oil massage for each other: ten minutes each, he goes first.",
+    "Strip rock-paper-scissors at home until someone is naked.",
+    "Sixty-nine tonight. He decides when it ends.",
+    "Lights on, mirror facing the bed.",
+    "No clothes for the rest of the night.",
+    "Kisses everywhere except the lips, five minutes each.",
+    "Morning round tomorrow, before coffee.",
+    "Each of you picks one position. You do both tonight.",
+    "Whisper your favorite memory of each other in bed, then recreate it.",
+    "Blindfold each other in turn, five minutes each.",
+    "Ice and warm hands. He goes first, then her.",
+    "Slow-dance naked to one song.",
+    "Send each other the dirtiest text you can think of, at the same time.",
+    "Leave a mark somewhere hidden on each other.",
+    "Two rounds tonight. The second starts as soon as the first ends."
+  ],
+  "extreme": [
+    "Free-use weekend for both: either of you can claim the other any time, anywhere private.",
+    "Orgasm race: whoever makes the other finish first wins a favor from the Extreme deck.",
+    "Sixty-nine with her on top, wrists tied, his hands on her hips. Nobody stops until you've both finished.",
+    "Finish together, or start over.",
+    "He cuffs her to the headboard, then she has to tell him exactly what she wants, word for word.",
+    "Edging for both: take turns bringing each other close. Nobody finishes before midnight.",
+    "On your knees in the shower, one after the other: he goes down on her, then she goes down on him.",
+    "Collar for her, rules for him: she obeys everything, and she has to finish first.",
+    "Mirror night: every position facing the mirror, eyes open.",
+    "Three rounds before sunrise, a different room each time.",
+    "She's blindfolded, he's silent. Only touch, until you've both finished.",
+    "Orgasm lock for both: nobody finishes for 48 hours. Then a full night.",
+    "Kitchen counter, table, then bed. You both finish in the bed.",
+    "He finishes with her mouth, she finishes with his. A coin flip decides who goes first.",
+    "Quickie before leaving the house tomorrow. No time to fully undress.",
+    "Hotel night: book it now, set the rules on the way there.",
+    "She begs, he decides, but you both finish before you sleep.",
+    "Roleplay: captain and flight attendant on a layover at the hotel. Full scene.",
+    "Wrists tied together for the whole shower.",
+    "One hour of foreplay for both. Nobody finishes before the timer.",
+    "Morning free use: whoever wakes up first can start on the other.",
+    "He goes down on her until she finishes, then she returns the favor on her knees, hands behind her back.",
+    "Silence for both: the first to make a sound has to finish the other with their mouth.",
+    "He spanks, she counts. Then she picks where he kisses every mark.",
+    "After each of you finishes, the other keeps going for one more minute.",
+    "One tied, one blindfolded: she's tied up, he can't see.",
+    "Cushions on the floor: slow first round, rough second, the third is her choice.",
+    "24 hours without clothes and without the bed: every room except the bedroom.",
+    "Each of you writes one fantasy on paper. Draw one at random and do it tonight.",
+    "The full night: he dominates, she obeys, you both finish twice. The safeword stands."
+  ]
+};
+
+/* ---------- State ---------- */
+const KEY = "ea-lastcall";
+const DEF = () => ({tab:"roll", loser:"eunice", level:"chill", used:{}, wallet:[], custom:{her:{chill:[],sexy:[],extreme:[]}, him:{chill:[],sexy:[],extreme:[]}, both:{chill:[],sexy:[],extreme:[]}}, losses:{eunice:0, elliot:0, both:0}, wtab:"elliot", addDeck:"her", addLevel:"sexy", seq:0});
+let S = DEF();
+try { const s = JSON.parse(localStorage.getItem(KEY) || "null"); if (s) S = Object.assign(DEF(), s); } catch(e){}
+if (!S.custom.both) S.custom.both = {chill:[],sexy:[],extreme:[]};
+if (S.losses.both === undefined) S.losses.both = 0;
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){} };
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const deckOf = (deck, lv) => deck === "both" ? [...BOTH[lv], ...S.custom.both[lv]] : [...SHARED[lv], ...SPECIFIC[deck][lv], ...S.custom[deck][lv]];
+const deckSize = deck => ["chill","sexy","extreme"].reduce((a,l) => a + deckOf(deck,l).length, 0);
+let current = null, rerolls = 1, spinning = false;
+
+function toast(t){ const el = document.createElement("div"); el.className = "toast"; el.textContent = t; document.getElementById("toasts").appendChild(el); setTimeout(() => el.remove(), 2800); }
+function sparks(x, y, n){
+  if (reduceMotion) return;
+  for (let i=0;i<n;i++){
+    const s = document.createElement("i"); s.className = "spark"; document.body.appendChild(s);
+    const a = Math.random()*Math.PI*2, d = 60 + Math.random()*120;
+    s.animate([{transform:`translate(${x}px,${y}px) scale(1)`, opacity:1},{transform:`translate(${x + Math.cos(a)*d}px,${y + Math.sin(a)*d}px) scale(.2)`, opacity:0}], {duration:900 + Math.random()*500, easing:"cubic-bezier(.2,.7,.3,1)"}).onfinish = () => s.remove();
+  }
+}
+function pick(deck, lv){
+  const cards = deckOf(deck, lv), k = deck + ":" + lv;
+  let used = S.used[k] || [];
+  let pool = cards.map((_,i) => i).filter(i => !used.includes(i));
+  if (!pool.length){ used = []; pool = cards.map((_,i) => i); }
+  const i = pool[Math.floor(Math.random()*pool.length)];
+  S.used[k] = [...used, i];
+  return {i, text:cards[i], total:cards.length};
+}
+
+/* ---------- Render ---------- */
+const app = document.getElementById("app");
+function render(){
+  document.documentElement.dataset.level = S.level;
+  const owed = who => S.wallet.filter(v => v.to === who && !v.done).length;
+  const head = `<div class="top">
+    <div class="logo">${LOGO}Elliot Air<small>Last Call</small></div>
+    <div class="tabs" role="tablist">
+      <button role="tab" data-tab="roll" aria-selected="${S.tab==="roll"}">${I.dice.replace('<svg','<svg style="width:14px;height:14px"')}Roll</button>
+      <button role="tab" data-tab="wallet" aria-selected="${S.tab==="wallet"}">Wallet <span class="n">${S.wallet.filter(v=>!v.done).length}</span></button>
+      <button role="tab" data-tab="add" aria-selected="${S.tab==="add"}">${I.plus.replace('<svg','<svg style="width:14px;height:14px"')}Add</button>
+    </div></div>`;
+  let body = "";
+  if (S.tab === "roll"){
+    const L = PEOPLE[S.loser], W = PEOPLE[L.winner];
+    body = `
+    <div class="group">
+      <div class="eyebrow">Bar game · Loser owes the winner</div>
+      <h1>Who lost <em>this round?</em></h1>
+      <p class="sub">Play any drinking game. Whoever loses rolls the dice and owes the other a favor. Both lose? You owe the night to each other.</p>
+    </div>
+    <div class="who">${["eunice","elliot","both"].map(k => { const p = PEOPLE[k], w = PEOPLE[p.winner]; if (k === "both") return `
+      <button class="pc both" data-loser="both" aria-pressed="${S.loser==="both"}" style="--pcol:${p.color}">
+        <span class="ls">${S.losses.both} times</span>
+        <span class="tk2"><span class="tk" style="background:#f4b6c4">${I.heart}</span><span class="tk" style="background:#ffc94a">${I.plane}</span></span><b>We both lost</b><span>You owe each other</span>
+      </button>`; return `
+      <button class="pc" data-loser="${k}" aria-pressed="${S.loser===k}" style="--pcol:${p.color}">
+        <span class="ls">${S.losses[k]} lost</span>
+        <span class="tk">${I[p.tok]}</span><b>${p.name} lost</b><span>Owes ${w.name} a favor</span>
+      </button>`; }).join("")}</div>
+    <div class="group">
+      <div class="label">Pick the deck</div>
+      <div class="levels">${Object.entries(LEVELS).map(([k,l]) => `
+        <button class="lv" data-level="${k}" aria-pressed="${S.level===k}">
+          <span class="fl">${[1,2,3].map(n => `<i class="${n<=l.n?"on":""}"></i>`).join("")}</span>
+          <b>${l.name}</b><small>${l.blurb}</small>
+        </button>`).join("")}</div>
+    </div>
+    <div class="stage">
+      <button class="scene tap" id="stageCube" aria-label="Roll the dice">${cubeHTML("cube")}</button>
+      <button class="btn roll" id="rollBtn">${I.dice}${S.loser==="both" ? "Roll for the both of you" : `Roll for ${esc(W.name)}'s favor`}</button>
+      <p class="note">${deckSize(L.deck)} favors in ${esc(L.name)}'s deck · ${deckOf(L.deck, S.level).length} in ${LEVELS[S.level].name}</p>
+    </div>`;
+  }
+  if (S.tab === "wallet"){
+    const list = S.wallet.filter(v => v.to === S.wtab);
+    const other = S.wtab === "elliot" ? "From Eunice" : S.wtab === "eunice" ? "From Elliot" : "Together";
+    body = `
+    <div class="group"><div class="eyebrow">${I.wallet.replace('<svg','<svg style="width:14px;height:14px;vertical-align:-2px"')} Favor wallet</div><h1>Owed <em>favors.</em></h1>
+      <p class="sub">Every voucher is redeemed later, when you're both in the mood. Each one keeps a veto: a voucher can always be swapped for another.</p></div>
+    <div class="seg seg3">${["elliot","eunice","both"].map(k => `<button data-wtab="${k}" aria-pressed="${S.wtab===k}">${k==="both" ? "Together" : "To " + PEOPLE[k].name} (${S.wallet.filter(v=>v.to===k && !v.done).length})</button>`).join("")}</div>
+    ${list.length ? `<ul class="list">${list.map(v => `
+      <li class="item ${v.done?"done":""}" style="--lc:${LEVELS[v.level].color}">
+        <button class="chk" data-done="${v.id}" aria-label="Mark as redeemed" aria-pressed="${!!v.done}">${I.check}</button>
+        <div><p>${esc(v.text)}</p><div class="meta"><span class="lvd">${LEVELS[v.level].name}</span><span>${other}</span><span>${v.date}</span></div></div>
+        <button class="del" data-del="${v.id}" aria-label="Remove">${I.x}</button>
+      </li>`).join("")}</ul>` : `<div class="empty">${S.wtab==="both" ? "No shared favors yet." : `No favors owed to ${PEOPLE[S.wtab].name} yet.`} Time for another round.</div>`}`;
+  }
+  if (S.tab === "add"){
+    const mine = S.custom[S.addDeck][S.addLevel];
+    body = `
+    <div class="group"><div class="eyebrow">Custom favors</div><h1>Add your <em>own.</em></h1>
+      <p class="sub">They join the deck and can be drawn like the others. Saved on this phone.</p></div>
+    <div class="panel">
+      <div class="label">Who does it</div>
+      <div class="seg seg3">${[["her","Eunice → Elliot"],["him","Elliot → Eunice"],["both","Together"]].map(([k,t]) => `<button data-adddeck="${k}" aria-pressed="${S.addDeck===k}">${t}</button>`).join("")}</div>
+      <div class="label">Deck</div>
+      <div class="levels">${Object.entries(LEVELS).map(([k,l]) => `<button class="lv" data-addlevel="${k}" aria-pressed="${S.addLevel===k}"><span class="fl">${[1,2,3].map(n => `<i class="${n<=l.n?"on":""}"></i>`).join("")}</span><b>${l.name}</b></button>`).join("")}</div>
+      <label class="label" for="newFav">The favor</label>
+      <textarea id="newFav" maxlength="220" placeholder="Write it the way you'd want to read it on the voucher…"></textarea>
+      <button class="btn" id="addBtn">${I.plus}Add to the deck</button>
+    </div>
+    <div class="counts">${["chill","sexy","extreme"].map(l => `<div><b>${deckOf(S.addDeck,l).length}</b><span>${LEVELS[l].name}</span></div>`).join("")}</div>
+    ${mine.length ? `<div class="label">Your ${LEVELS[S.addLevel].name} favors · ${({her:"Eunice → Elliot", him:"Elliot → Eunice", both:"Together"})[S.addDeck]}</div><ul class="list">${mine.map((t,i) => `
+      <li class="item" style="grid-template-columns:1fr auto"><div><p>${esc(t)}</p></div><button class="del" data-cdel="${i}" aria-label="Delete">${I.x}</button></li>`).join("")}</ul>` : `<div class="empty">No custom ${LEVELS[S.addLevel].name} favors here yet.</div>`}`;
+  }
+  app.innerHTML = head + body;
+  bind();
+}
+function cubeHTML(id){
+  return `<div class="cube" id="${id}"><div class="core c1"></div><div class="core c2"></div><div class="core c3"></div>
+    <div class="face f1">${LOGO}</div><div class="face f2"><span class="w">EA</span></div>
+    <div class="face f3">${I.heart.replace('fill="currentColor"','fill="#ff5a7a"')}</div><div class="face f4" style="color:#141b2e">${I.glass}</div>
+    <div class="face f5" style="color:#ff8f6b">${I.flame}</div><div class="face f6">${I.plane.replace('fill="currentColor"','fill="#ffc94a"')}</div>
+  </div>`;
+}
+function voucherHTML(v, animate){
+  const L = PEOPLE[v.loser], W = PEOPLE[L.winner], both = v.loser === "both";
+  return `<div class="voucher ${animate?"popin":""}" style="--accent:${LEVELS[v.level].color}">
+    <div class="v-head">${LOGO}<span class="t">FAVOR VOUCHER</span><span class="lvtag">${LEVELS[v.level].name}</span></div>
+    <div class="v-body">
+      <div class="v-route"><b>${both ? "EUN" : L.name.slice(0,3).toUpperCase()}</b><span class="ln"></span>${both ? I.heart.replace('<svg','<svg style="width:18px;height:18px;color:#ff5a7a"') : I.plane.replace('<svg','<svg style="width:18px;height:18px;transform:rotate(90deg);color:#141b2e"')}<span class="ln"></span><b>${both ? "ELL" : W.name.slice(0,3).toUpperCase()}</b></div>
+      <div class="v-route" style="justify-content:space-between">${both ? `<span>Eunice &amp; Elliot</span><span>owe each other</span>` : `<span>${esc(L.name)} owes</span><span>${esc(W.name)}</span>`}</div>
+      <p class="v-text">${esc(v.text)}</p>
+    </div>
+    <div class="v-foot"><dl><div><dt>No.</dt><dd>${String(v.i+1).padStart(3,"0")}/${v.total}</dd></div><div><dt>Valid</dt><dd>Until redeemed</dd></div></dl>${BARCODE}</div>
+  </div>`;
+}
+/* ---------- Roll: full-screen popup, die throw, voucher pop ---------- */
+const $ = id => document.getElementById(id);
+function popActions(){
+  const W = PEOPLE[PEOPLE[current.loser].winner];
+  return `<button class="btn" id="keepBtn">${I.wallet}${current.loser === "both" ? "Add to your shared wallet" : `Add to ${esc(W.name)}'s wallet`}</button>
+    <button class="btn outline" id="rerollBtn" ${rerolls ? "" : "disabled"}>${I.glass}${rerolls ? "Take a shot to re-roll" : "No re-roll left this round"}</button>
+    <button class="btn ghost" id="closePop">Close without saving</button>`;
+}
+function closePop(){ const pop = $("pop"); if (pop){ pop.hidden = true; pop.innerHTML = ""; } document.body.classList.remove("lock"); current = null; spinning = false; render(); }
+function roll(isReroll){
+  if (spinning) return; spinning = true;
+  const L = PEOPLE[S.loser], W = PEOPLE[L.winner];
+  if (!isReroll){ rerolls = 1; S.losses[S.loser]++; }
+  const res = pick(L.deck, S.level);
+  const next = {...res, loser:S.loser, level:S.level};
+  save();
+  let pop = $("pop");
+  if (!pop){ pop = document.createElement("div"); pop.id = "pop"; pop.className = "pop"; pop.setAttribute("role","dialog"); pop.setAttribute("aria-modal","true"); document.body.appendChild(pop); }
+  pop.innerHTML = `<div class="pop-in">
+    <div class="pop-label">${S.loser === "both" ? `<span style="color:#f4b6c4">Eunice</span> &amp; <span style="color:#ffc94a">Elliot</span> roll together` : `<span style="color:${L.color}">${esc(L.name)}</span> rolls for <span style="color:${W.color}">${esc(W.name)}</span>`} · ${LEVELS[S.level].name}</div>
+    <div class="thrower" id="thrower"><div class="tumble" id="tumble"><div class="scene big"><div class="halo" id="phalo"></div>${cubeHTML("pcube")}</div></div></div>
+    <div class="pop-card" id="popCard"></div>
+    <div class="pop-actions" id="popActions"></div>
+  </div>`;
+  pop.hidden = false; document.body.classList.add("lock");
+  const reveal = () => {
+    current = next; spinning = false;
+    $("thrower").classList.add("mini");
+    $("popCard").innerHTML = voucherHTML(current, true);
+    $("popActions").innerHTML = popActions();
+    bindPop();
+    const r = $("popCard").getBoundingClientRect(); sparks(r.left + r.width/2, r.top + r.height/3, 34);
+    try { navigator.vibrate && navigator.vibrate([20,40,30]); } catch(e){}
+  };
+  if (reduceMotion){ reveal(); return; }
+  const tumble = $("tumble"), cube = $("pcube"), halo = $("phalo");
+  cube.getAnimations().forEach(a => a.cancel());
+  cube.classList.add("still");
+  const rx = 1080 + Math.floor(Math.random()*4)*90 + 45, ry = 1440 + Math.floor(Math.random()*4)*90 + 45;
+  cube.animate([
+    {transform:"rotateX(-22deg) rotateY(32deg) rotateZ(0deg)"},
+    {transform:`rotateX(${rx*0.75}deg) rotateY(${ry*0.7}deg) rotateZ(160deg)`, offset:.55},
+    {transform:`rotateX(${rx - 45 - 22}deg) rotateY(${ry - 45 + 32}deg) rotateZ(360deg)`}
+  ], {duration:1650, easing:"cubic-bezier(.2,.7,.25,1)", fill:"forwards"});
+  tumble.animate([
+    {transform:"translateY(420px) scale(.5)"},
+    {transform:"translateY(-70px) scale(1.08)", offset:.42},
+    {transform:"translateY(0) scale(1)", offset:.68},
+    {transform:"translateY(-22px) scale(1)", offset:.8},
+    {transform:"translateY(0) scale(1)", offset:.9},
+    {transform:"translateY(-6px) scale(1)", offset:.95},
+    {transform:"translateY(0) scale(1)"}
+  ], {duration:1650, easing:"cubic-bezier(.25,.8,.35,1)"});
+  setTimeout(() => { halo.classList.add("on"); const r = tumble.getBoundingClientRect(); sparks(r.left + r.width/2, r.top + r.height/2, 16); }, 1100);
+  setTimeout(reveal, 1700);
+}
+function bindPop(){
+  $("keepBtn").onclick = () => {
+    const W = PEOPLE[current.loser].winner;
+    S.wallet.unshift({id:++S.seq, to:W, level:current.level, text:current.text, date:new Date().toLocaleDateString("en-GB",{day:"numeric",month:"short"}), done:false});
+    save(); toast(W === "both" ? "Saved in your shared wallet" : `Saved in ${PEOPLE[W].name}'s wallet`); closePop();
+  };
+  $("rerollBtn").onclick = () => { if (!rerolls) return; rerolls--; toast("Shot taken. Rolling again…"); roll(true); };
+  $("closePop").onclick = closePop;
+}
+document.addEventListener("keydown", e => { if (e.key === "Escape" && $("pop") && !$("pop").hidden && !spinning) closePop(); });
+function bind(){
+  document.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => { S.tab = b.dataset.tab; save(); render(); });
+  document.querySelectorAll("[data-loser]").forEach(b => b.onclick = () => { S.loser = b.dataset.loser; current = null; save(); render(); });
+  document.querySelectorAll("[data-level]").forEach(b => b.onclick = () => { S.level = b.dataset.level; current = null; save(); render(); });
+  const rb = document.getElementById("rollBtn"); if (rb) rb.onclick = () => roll(false);
+  const sc = document.getElementById("stageCube"); if (sc) sc.onclick = () => roll(false);
+  document.querySelectorAll("[data-wtab]").forEach(b => b.onclick = () => { S.wtab = b.dataset.wtab; save(); render(); });
+  document.querySelectorAll("[data-done]").forEach(b => b.onclick = () => { const v = S.wallet.find(x => x.id === +b.dataset.done); v.done = !v.done; if (v.done){ const r = b.getBoundingClientRect(); sparks(r.left+12, r.top+12, 14); } save(); render(); });
+  document.querySelectorAll("[data-del]").forEach(b => b.onclick = () => { S.wallet = S.wallet.filter(x => x.id !== +b.dataset.del); save(); render(); });
+  document.querySelectorAll("[data-adddeck]").forEach(b => b.onclick = () => { S.addDeck = b.dataset.adddeck; save(); render(); });
+  document.querySelectorAll("[data-addlevel]").forEach(b => b.onclick = () => { S.addLevel = b.dataset.addlevel; save(); render(); });
+  const ab = document.getElementById("addBtn");
+  if (ab) ab.onclick = () => {
+    const ta = document.getElementById("newFav"), v = ta.value.trim();
+    if (!v){ ta.focus(); toast("Write the favor first"); return; }
+    S.custom[S.addDeck][S.addLevel].push(v); save(); render(); toast("Added to the deck");
+  };
+  document.querySelectorAll("[data-cdel]").forEach(b => b.onclick = () => { S.custom[S.addDeck][S.addLevel].splice(+b.dataset.cdel, 1); delete S.used[S.addDeck + ":" + S.addLevel]; save(); render(); });
+}
+
+/* ---------- Ambient stars ---------- */
+(() => {
+  const c = document.getElementById("stars"), x = c.getContext("2d"); let st = [], W, H, d;
+  const size = () => { d = Math.min(devicePixelRatio || 1, 1.5); W = c.width = innerWidth*d; H = c.height = innerHeight*d; st = Array.from({length:Math.round(innerWidth*innerHeight/11000)}, () => ({x:Math.random()*W, y:Math.random()*H, r:(Math.random()*1.1+.3)*d, p:Math.random()*6.28})); };
+  const f = t => { x.clearRect(0,0,W,H); x.fillStyle = "#f3f1ec"; for (const s of st){ x.globalAlpha = .2 + .3*Math.sin(s.p + t/1600); x.beginPath(); x.arc(s.x,s.y,s.r,0,6.28); x.fill(); } if (!reduceMotion) requestAnimationFrame(f); };
+  addEventListener("resize", size); size(); requestAnimationFrame(f);
+})();
+
+render();
+</script>
+<a href="../" class="ea-lounge-back" aria-label="Back to the Lounge" style="position:fixed;z-index:9999;left:max(12px,env(safe-area-inset-left,0px));bottom:max(12px,env(safe-area-inset-bottom,0px));display:inline-flex;align-items:center;gap:6px;padding:8px 13px 8px 10px;border-radius:99px;background:rgba(10,19,40,.86);border:1px solid #22355c;color:#f3f1ec;font:700 12.5px Manrope,system-ui,sans-serif;text-decoration:none;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Lounge</a>
+</body>
+</html>
